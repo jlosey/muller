@@ -60,7 +60,9 @@ class MullerForce(mm.CustomExternalForce):
 ##############################################################################
 # Global parameters
 ##############################################################################
-
+# random seed
+seed = 123456
+_r = np.random.seed(seed)
 # each particle is totally independent, propagating under the same potential
 nParticles = 100  
 mass = 1.0 * dalton
@@ -107,12 +109,12 @@ x_dig = np.digitize(posi[:,0],x_bins)
 y_dig = np.digitize(posi[:,1],y_bins)
 x_dig_i = x_dig
 y_dig_i = y_dig
-print(x_dig_i,x_bins)
 ### transition matrix ###
 T = np.zeros((nbins,nbins,nbins,nbins),dtype=int)
 
 ### Loop over number of steps
-for i in range(10000):
+steps = 1e4
+for i in range(int(steps)):
     integrator.step(1)
     posi = context.getState(getPositions=True).getPositions(asNumpy=True).value_in_unit(nanometer)
     x_dig = np.digitize(posi[:,0],x_bins)
@@ -120,7 +122,15 @@ for i in range(10000):
     np.add.at(T,(x_dig_i,x_dig,y_dig_i,y_dig),1)
     x_dig_i = x_dig
     y_dig_i = y_dig
-    print(x_dig)
-    print(T.sum())
-print(T.reshape(nbins*nbins,nbins*nbins))
-#pp.show()
+
+np.savetxt(f"data/transitions/transition_{seed}.txt"
+        ,T.reshape(nbins*nbins,nbins*nbins)
+        ,fmt="%d"
+        ,header=f"Transitions for 2D Muller potential\n" +
+            f"{nbins} bins\n" + 
+            f"{steps} steps\n" + 
+            f"{nParticles} Particles\n" +
+            f"T = {temperature}\n" +
+            f"friction = {friction}"
+        )
+np.save(f"data/transitions/transitions_{seed}",T)
